@@ -12,7 +12,7 @@ HARD_PWM_CHAN = 0
 SLEEP_TIME = 5
 OFF_TEMP = 35
 MAX_TEMP = 80
-FAN_LOW_PCT = 20
+FAN_LOW_PCT = 50
 VERBOSE = False
 NOTIFY = False
 
@@ -94,7 +94,7 @@ def main():
     print(f'NOTIFY: {NOTIFY}')
     print('')
 
-    pwm = HardwarePWM(HARD_PWM_CHAN, hz=25000)
+    pwm = HardwarePWM(HARD_PWM_CHAN, hz=60000)
     pwm.start(100)
 
     if NOTIFY:
