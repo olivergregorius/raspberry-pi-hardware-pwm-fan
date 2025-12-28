@@ -9,6 +9,7 @@ from rpi_hardware_pwm import HardwarePWM
 
 # Defaults
 HARD_PWM_CHAN = 0
+HARD_PWM_FREQ = 80000
 SLEEP_TIME = 5
 OFF_TEMP = 35
 MAX_TEMP = 80
@@ -94,7 +95,7 @@ def main():
     print(f'NOTIFY: {NOTIFY}')
     print('')
 
-    pwm = HardwarePWM(HARD_PWM_CHAN, hz=60000)
+    pwm = HardwarePWM(HARD_PWM_CHAN, hz=HARD_PWM_FREQ)
     pwm.start(100)
 
     if NOTIFY:
