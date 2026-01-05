@@ -1,94 +1,56 @@
 #!/usr/bin/python3
 
-import getopt
 import sys
 import time
+
 import sdnotify
-from subprocess import check_output
 from rpi_hardware_pwm import HardwarePWM
 
 # Defaults
 HARD_PWM_CHAN = 0
-HARD_PWM_FREQ = 80000
-SLEEP_TIME = 5
+HARD_PWM_FREQ = 40000
+SLEEP_TIME = 10
 OFF_TEMP = 35
+ON_TEMP = 40
 MAX_TEMP = 80
-FAN_LOW_PCT = 50
+FAN_LOW_PCT = 40
 VERBOSE = False
 NOTIFY = False
 
+running = False
 
-def usage():
-    """Print usage information"""
-    print(f'Usage: {sys.argv[0]} [-hvn] --hard_pwm_channel=[0 | 1] [-off-temp=<temp>] ')
-    print('  [-high-temp=<temp>] [-fan-low-pct=<pct>] [-sleep=<sec>]')
-    print('')
-    print('  -h, --help                Print this help')
-    print('  -v, --verbose             Verbose output')
-    print('  --off-temp=<temp>         Temperature at which the fan is turned off')
-    print('  --high-temp=<temp>        Temperature at which the fan is at full speed')
-    print('  --fan-low-pct=<pct>       How slow the fan is at the lowest speed')
-    print('  --hard-pwm-channel=<chan> GPIO channel to use for the hardware PWM fan')
-    print('  --sleep=<sec>             Time to sleep between temperature checks')
-    print('  -n, --notify              Enables systemd notify support')
-    print('')
-    print('Note: You must specify a hardware PWM channel for this to work, and')
-    print('  have loaded the pwm or pwm-2chan dtoverlay for the Raspberry Pi.')
-    print('  See /boot/overlays/README and /boot/config.txt for more info.')
-    print('')
-
-def gettemp():
-    """Get the current temperature"""
-    return float(check_output(['cat', '/sys/class/thermal/thermal_zone0/temp']).decode()) / 1000.0
+def read_temp():
+    with open('/sys/class/thermal/thermal_zone0/temp', 'ro') as temp_file:
+        return float(temp_file.readline()) / 1000.0
 
 
-def fan_speed(temp: float):
-    """Calculate the fan 'curve' (not really a curve)"""
-    max_speed = 100
-    min_speed = max_speed * FAN_LOW_PCT / 100
+def calc_fan_speed(temp: float):
+    global running
+    
     if temp < OFF_TEMP:
+        running = False
         return 0
+    if temp < ON_TEMP and not running:
+        return 0
+    if temp < ON_TEMP and running:
+        return FAN_LOW_PCT
     elif temp > MAX_TEMP:
-        return max_speed
+        running = True
+        return 100
     else:
-        # linear interpolation
-        return int(
-            min_speed + ((temp - OFF_TEMP) / (MAX_TEMP - OFF_TEMP)) * (max_speed - min_speed))
+        running = True
+        return int(FAN_LOW_PCT + ((temp - ON_TEMP) / (MAX_TEMP - ON_TEMP)) * (100 - FAN_LOW_PCT))
+
 
 def main():
-    """Main function"""
-    global HARD_PWM_CHAN, SLEEP_TIME, OFF_TEMP, MAX_TEMP, FAN_LOW_PCT, VERBOSE, NOTIFY
-    try:
-        opts, _ = getopt.getopt(sys.argv[1:], 'hv', ['off-temp=', 'high-temp=', 'fan-low-pct=',
-                                                     'hard-pwm-channel=', 'sleep=', 'verbose', 'notify'])
-    except getopt.GetoptError as err:
-        print(err)
-        print('')
-        usage()
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ('-h', '--help'):
-            usage()
-            sys.exit()
-        elif opt in ('-v', '--verbose'):
-            VERBOSE = True
-        elif opt in ('--off-temp'):
-            OFF_TEMP = int(arg)
-        elif opt in ('--high-temp'):
-            MAX_TEMP = int(arg)
-        elif opt in ('--fan-low-pct'):
-            FAN_LOW_PCT = int(arg)
-        elif opt in ('--hard-pwm-channel'):
-            HARD_PWM_CHAN = int(arg)
-        elif opt in ('--sleep'):
-            SLEEP_TIME = int(arg)
-        elif opt in ('-n', '--notify'):
-            NOTIFY = True
-
+    global running
+    
     print('')
     print(f'HARD_PWM_CHAN: {HARD_PWM_CHAN}')
+    print(f'HARD_PWM_FREQ: {HARD_PWM_FREQ}')
     print(f'SLEEP_TIME: {SLEEP_TIME}')
     print(f'OFF_TEMP: {OFF_TEMP}')
+    print(f'ON_TEMP: {ON_TEMP}')
     print(f'MAX_TEMP: {MAX_TEMP}')
     print(f'FAN_LOW_PCT: {FAN_LOW_PCT}')
     print(f'VERBOSE: {VERBOSE}')
@@ -97,6 +59,7 @@ def main():
 
     pwm = HardwarePWM(HARD_PWM_CHAN, hz=HARD_PWM_FREQ)
     pwm.start(100)
+    running = True
 
     if NOTIFY:
         systemd = sdnotify.SystemdNotifier()
@@ -104,8 +67,8 @@ def main():
 
     try:
         while True:
-            temp = gettemp()
-            speed = fan_speed(temp)
+            temp = read_temp()
+            speed = calc_fan_speed(temp)
             pwm.change_duty_cycle(speed)
             if VERBOSE:
                 print(f'Temp: {temp:.1f}C, Speed: {speed}%')

@@ -1,18 +1,12 @@
 [Unit]
-Description=raspberry pi hardware fan control
+Description=Raspberry Pi hardware fan control
 After=basic.target
 
 [Service]
 Restart=on-failure
 RestartSec=5s
 Environment=PYTHONUNBUFFERED=true
-ExecStart=/usr/local/bin/hardware_pwm_fan \
-            --sleep=5 \
-            --hard-pwm-channel=0 \
-            --fan-low-pct=50 \
-            --high-temp=80 \
-            --off-temp=40 \
-            --notify
+ExecStart=/usr/local/bin/hardware_pwm_fan
 Nice=5
 StandardError=journal
 StandardOutput=journal
