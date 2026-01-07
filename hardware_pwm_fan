@@ -20,7 +20,7 @@ NOTIFY = False
 running = False
 
 def read_temp():
-    with open('/sys/class/thermal/thermal_zone0/temp', 'ro') as temp_file:
+    with open('/sys/class/thermal/thermal_zone0/temp', 'r') as temp_file:
         return float(temp_file.readline()) / 1000.0
 
 
