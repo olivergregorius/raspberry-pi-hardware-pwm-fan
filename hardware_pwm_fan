@@ -10,12 +10,12 @@ from rpi_hardware_pwm import HardwarePWM
 HARD_PWM_CHAN = 0
 HARD_PWM_FREQ = 40000
 SLEEP_TIME = 10
-OFF_TEMP = 35
-ON_TEMP = 40
+OFF_TEMP = 45
+ON_TEMP = 50
 MAX_TEMP = 80
 FAN_LOW_PCT = 40
 VERBOSE = False
-NOTIFY = False
+NOTIFY = True
 
 running = False
 
